@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Glass Dock 壁纸生成器 · RedmiK80Ultra-wallpaper-dock</title>
+<meta name="description" content="给任意壁纸加上一条 iOS 风格的毛玻璃 Dock 栏，实时预览并导出 1280x2772 手机壁纸。单文件、零依赖。">
+<style>
+  :root{--bg:#141416;--panel:#1c1c1f;--line:#2e2e33;--txt:#e8e8ea;--dim:#8b8b93;--accent:#4c8dff}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:13px/1.5 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;height:100vh;overflow:hidden}
+  #app{display:flex;height:100vh}
+  aside{width:320px;flex:0 0 320px;background:var(--panel);border-right:1px solid var(--line);padding:14px;overflow-y:auto}
+  main{flex:1;display:flex;align-items:center;justify-content:center;position:relative;padding:16px}
+  h1{font-size:14px;margin:0 0 12px;font-weight:600}
+  .drop{border:1.5px dashed #3a3a42;border-radius:10px;padding:18px;text-align:center;color:var(--dim);cursor:pointer;margin-bottom:14px}
+  .drop:hover{border-color:var(--accent);color:var(--txt)}
+  .drop b{color:var(--txt);font-weight:600}
+  .row{margin-bottom:11px}
+  .row label{display:flex;justify-content:space-between;color:var(--dim);margin-bottom:4px;font-size:12px}
+  .row label span{color:var(--txt);font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%;accent-color:var(--accent);height:18px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .num{width:100%;background:#111113;border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:5px 7px;font:inherit}
+  button{width:100%;padding:9px;border-radius:8px;border:1px solid var(--line);background:#26262b;color:var(--txt);font:inherit;cursor:pointer}
+  button:hover{background:#2f2f36}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  button.primary:hover{filter:brightness(1.08)}
+  .sep{height:1px;background:var(--line);margin:14px 0}
+  canvas{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+  .hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);color:#6b6b73;font-size:12px;pointer-events:none;white-space:nowrap}
+  select{width:100%;background:#111113;border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:6px}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside>
+    <h1>玻璃 Dock 壁纸生成器</h1>
+    <div style="color:#8b8b93;font-size:12px;margin:-6px 0 12px">Glass Dock · 单文件网页工具</div>
+    <div class="drop" id="drop"><b>拖入壁纸</b><br>或点击选择文件</div>
+    <input type="file" id="file" accept="image/*" hidden>
+
+    <div class="grid2">
+      <div><label style="color:var(--dim);font-size:12px">宽度</label><input class="num" id="W" type="number" value="1280"></div>
+      <div><label style="color:var(--dim);font-size:12px">高度</label><input class="num" id="H" type="number" value="2772"></div>
+    </div>
+    <div class="sep"></div>
+
+    <div class="row"><label>模糊强度 <span id="vBlur">10</span></label><input type="range" id="blur" min="0" max="60" value="10"></div>
+    <div class="row"><label>白色浓度（上） <span id="vVeilT">3.5%</span></label><input type="range" id="veilTop" min="0" max="400" value="35"></div>
+    <div class="row"><label>白色浓度（下） <span id="vVeilB">2.0%</span></label><input type="range" id="veilBot" min="0" max="400" value="20"></div>
+    <div class="row"><label>明暗 <span id="vDark">0.98</span></label><input type="range" id="darken" min="40" max="130" value="98"></div>
+    <div class="row"><label>色彩饱和 <span id="vSat">1.24</span></label><input type="range" id="sat" min="50" max="200" value="124"></div>
+    <div class="row"><label>内描边 <span id="vRim">18%</span></label><input type="range" id="rim" min="0" max="100" value="18"></div>
+    <div class="row"><label>顶部高光 <span id="vSpec">30%</span></label><input type="range" id="spec" min="0" max="100" value="30"></div>
+    <div class="sep"></div>
+
+    <div class="row"><label>圆角 <span id="vR">104</span></label><input type="range" id="radius" min="0" max="200" value="104"></div>
+    <div class="row"><label>高度 <span id="vHd">274</span></label><input type="range" id="height" min="120" max="500" value="274"></div>
+    <div class="row"><label>左右边距 <span id="vM">44</span></label><input type="range" id="margin" min="0" max="200" value="44"></div>
+    <div class="row"><label>离底边 <span id="vB">118</span></label><input type="range" id="bottom" min="0" max="300" value="118"></div>
+    <div class="row"><label>投影强度 <span id="vSh">45%</span></label><input type="range" id="shadow" min="0" max="100" value="45"></div>
+    <div class="sep"></div>
+
+    <button class="primary" id="export">导出 PNG（全分辨率）</button>
+    <div style="height:8px"></div>
+    <button id="savepreset">保存当前参数为预设</button>
+    <div style="height:8px"></div>
+    <select id="presets"><option value="">— 载入预设 —</option></select>
+    <div style="height:8px"></div>
+    <button id="reset">恢复默认参数</button>
+  </aside>
+
+  <main>
+    <canvas id="view"></canvas>
+    <div class="hint" id="hint">把你手机壁纸拖进来</div>
+  </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const view = $('view');
+const vctx = view.getContext('2d');
+
+let img = null;
+const P = {
+  W: 1280, H: 2772,
+  blur: 10, veilTop: 0.035, veilBot: 0.020, darken: 0.98, sat: 1.24,
+  rim: 0.18, spec: 0.30,
+  radius: 104, height: 274, margin: 44, bottom: 118, shadow: 0.45
+};
+
+function readUI(){
+  P.W = +$('W').value || 1280;
+  P.H = +$('H').value || 2772;
+  P.blur = +$('blur').value;
+  P.veilTop = +$('veilTop').value / 1000;
+  P.veilBot = +$('veilBot').value / 1000;
+  P.darken = +$('darken').value / 100;
+  P.sat = +$('sat').value / 100;
+  P.rim = +$('rim').value / 100;
+  P.spec = +$('spec').value / 100;
+  P.radius = +$('radius').value;
+  P.height = +$('height').value;
+  P.margin = +$('margin').value;
+  P.bottom = +$('bottom').value;
+  P.shadow = +$('shadow').value / 100;
+  // labels
+  $('vBlur').textContent = P.blur;
+  $('vVeilT').textContent = (P.veilTop*100).toFixed(1)+'%';
+  $('vVeilB').textContent = (P.veilBot*100).toFixed(1)+'%';
+  $('vDark').textContent = P.darken.toFixed(2);
+  $('vSat').textContent = P.sat.toFixed(2);
+  $('vRim').textContent = Math.round(P.rim*100)+'%';
+  $('vSpec').textContent = Math.round(P.spec*100)+'%';
+  $('vR').textContent = P.radius;
+  $('vHd').textContent = P.height;
+  $('vM').textContent = P.margin;
+  $('vB').textContent = P.bottom;
+  $('vSh').textContent = Math.round(P.shadow*100)+'%';
+}
+
+function makeCanvas(w,h){ const c=document.createElement('canvas'); c.width=w; c.height=h; return c; }
+
+// cover-crop source image into a W×H canvas
+function baseCanvas(W,H){
+  const c = makeCanvas(W,H), x = c.getContext('2d');
+  x.fillStyle='#101012'; x.fillRect(0,0,W,H);
+  if(!img) return c;
+  const s = Math.max(W/img.width, H/img.height);
+  const dw = img.width*s, dh = img.height*s;
+  x.imageSmoothingQuality='high';
+  x.drawImage(img, (W-dw)/2, (H-dh)/2, dw, dh);
+  return c;
+}
+
+function roundRectPath(ctx, x, y, w, h, r){
+  r = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+// render at given scale into a canvas; returns canvas
+function render(scale){
+  const W = Math.round(P.W*scale), H = Math.round(P.H*scale);
+  const out = makeCanvas(W,H), ctx = out.getContext('2d');
+  const base = baseCanvas(W,H);
+  ctx.drawImage(base,0,0);
+
+  const k = scale;
+  const x0 = P.margin*k, y0 = (P.H - P.bottom - P.height)*k;
+  const bw = (P.W - P.margin*2)*k, bh = P.height*k, rr = P.radius*k;
+
+  // drop shadow
+  if(P.shadow > 0){
+    const sh = makeCanvas(W,H), sx = sh.getContext('2d');
+    sx.filter = `blur(${26*k}px)`;
+    sx.fillStyle = `rgba(0,0,0,${P.shadow})`;
+    roundRectPath(sx, x0-3*k, y0+10*k, bw+6*k, bh+16*k, rr+3*k);
+    sx.fill();
+    ctx.drawImage(sh,0,0);
+  }
+
+  // blurred layer
+  const blurC = makeCanvas(W,H), bctx = blurC.getContext('2d');
+  if(P.blur > 0){
+    bctx.filter = `blur(${P.blur*k}px)`;
+    bctx.drawImage(base,0,0);
+  } else {
+    bctx.drawImage(base,0,0);
+  }
+
+  // glass, clipped
+  ctx.save();
+  roundRectPath(ctx, x0, y0, bw, bh, rr);
+  ctx.clip();
+  ctx.filter = `saturate(${P.sat}) brightness(${P.darken})`;
+  ctx.drawImage(blurC,0,0);
+  ctx.filter = 'none';
+
+  // white veil (vertical gradient)
+  const g = ctx.createLinearGradient(0,y0,0,y0+bh);
+  g.addColorStop(0, `rgba(255,255,255,${P.veilTop})`);
+  g.addColorStop(1, `rgba(255,255,255,${P.veilBot})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(x0,y0,bw,bh);
+
+  // inner rim stroke, brighter at top
+  const rimG = ctx.createLinearGradient(0,y0,0,y0+bh);
+  rimG.addColorStop(0, `rgba(255,255,255,${P.rim})`);
+  rimG.addColorStop(1, `rgba(255,255,255,${P.rim*0.22})`);
+  ctx.strokeStyle = rimG;
+  ctx.lineWidth = Math.max(1, 2.5*k);
+  roundRectPath(ctx, x0+1*k, y0+1*k, bw-2*k, bh-2*k, Math.max(0,rr-1*k));
+  ctx.stroke();
+
+  // top specular
+  const sh2 = 7*k;
+  const sg = ctx.createLinearGradient(0,y0,0,y0+sh2);
+  sg.addColorStop(0, `rgba(255,255,255,${P.spec})`);
+  sg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = sg;
+  ctx.fillRect(x0,y0,bw,sh2);
+
+  ctx.restore();
+  return out;
+}
+
+let raf = null;
+function scheduleRender(){
+  if(raf) return;
+  raf = requestAnimationFrame(() => {
+    raf = null;
+    readUI();
+    const holder = view.parentElement;
+    const availW = Math.max(200, holder.clientWidth - 48);
+    const availH = Math.max(200, holder.clientHeight - 48);
+    const disp = Math.min(availW/P.W, availH/P.H);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const c = render(disp * dpr);
+    view.width = c.width; view.height = c.height;
+    view.style.width = Math.round(P.W*disp) + 'px';
+    view.style.height = Math.round(P.H*disp) + 'px';
+    vctx.drawImage(c,0,0);
+  });
+}
+
+// ---- inputs ----
+['W','H','blur','veilTop','veilBot','darken','sat','rim','spec','radius','height','margin','bottom','shadow']
+  .forEach(id => $(id).addEventListener('input', scheduleRender));
+
+// ---- file load ----
+function loadFile(f){
+  if(!f || !f.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(f);
+  const im = new Image();
+  im.onload = () => { img = im; $('hint').textContent = `${im.width}×${im.height} 已载入`; scheduleRender(); };
+  im.src = url;
+}
+$('drop').onclick = () => $('file').click();
+$('file').onchange = e => loadFile(e.target.files[0]);
+['dragover','dragenter'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); $('drop').style.borderColor='#4c8dff'; }));
+['dragleave','drop'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); $('drop').style.borderColor=''; }));
+document.addEventListener('drop', e => { if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+
+// ---- export ----
+$('export').onclick = () => {
+  if(!img){ alert('先载入一张壁纸'); return; }
+  readUI();
+  const c = render(1);
+  c.toBlob(b => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(b);
+    a.download = `wallpaper_glassdock_${P.W}x${P.H}.png`;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+  }, 'image/png');
+};
+
+// ---- presets ----
+const KEY = 'glassdock_presets_v1';
+const getPresets = () => JSON.parse(localStorage.getItem(KEY) || '{}');
+function refreshPresets(){
+  const sel = $('presets'), data = getPresets();
+  sel.innerHTML = '<option value="">— 载入预设 —</option>';
+  Object.keys(data).forEach(name => {
+    const o = document.createElement('option'); o.value = name; o.textContent = name; sel.appendChild(o);
+  });
+}
+$('savepreset').onclick = () => {
+  readUI();
+  const name = prompt('预设名称', '我的玻璃');
+  if(!name) return;
+  const data = getPresets();
+  data[name] = JSON.parse(JSON.stringify(P));
+  localStorage.setItem(KEY, JSON.stringify(data));
+  refreshPresets();
+};
+$('presets').onchange = e => {
+  const data = getPresets(), p = data[e.target.value];
+  if(!p) return;
+  Object.assign(P, p);
+  $('W').value = P.W; $('H').value = P.H;
+  $('blur').value = P.blur;
+  $('veilTop').value = Math.round(P.veilTop*1000);
+  $('veilBot').value = Math.round(P.veilBot*1000);
+  $('darken').value = Math.round(P.darken*100);
+  $('sat').value = Math.round(P.sat*100);
+  $('rim').value = Math.round(P.rim*100);
+  $('spec').value = Math.round(P.spec*100);
+  $('radius').value = P.radius;
+  $('height').value = P.height;
+  $('margin').value = P.margin;
+  $('bottom').value = P.bottom;
+  $('shadow').value = Math.round(P.shadow*100);
+  scheduleRender();
+};
+
+// ---- reset to factory defaults ----
+const DEFAULT_UI = {
+  blur: 10, veilTop: 35, veilBot: 20, darken: 98, sat: 124,
+  rim: 18, spec: 30, radius: 104, height: 274, margin: 44, bottom: 118, shadow: 45
+};
+$('reset').onclick = () => {
+  Object.entries(DEFAULT_UI).forEach(([k, v]) => { $(k).value = v; });
+  scheduleRender();
+};
+
+window.addEventListener('resize', scheduleRender);
+refreshPresets();
+readUI();
+scheduleRender();
+</script>
+</body>
+</html>

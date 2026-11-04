@@ -1,0 +1,13 @@
+# OS junk
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Local test output
+out/
+*.psd
