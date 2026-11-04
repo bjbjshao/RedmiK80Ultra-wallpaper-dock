@@ -5,6 +5,8 @@
 
 为 Redmi K80 Ultra（1280×2772）量过尺寸，其他机型改一下宽高即可。
 
+**[→ 在线试用](https://bjbjshao.github.io/RedmiK80Ultra-wallpaper-dock/)**
+
 ![preview](docs/preview-small.png)
 
 工具长这样：
@@ -29,7 +31,7 @@
 3. 拖入你的壁纸（或点击选择文件）
 4. 调滑杆 → 点「导出 PNG」
 
-在线 Demo：`https://<你的用户名>.github.io/RedmiK80Ultra-wallpaper-dock/`
+在线 Demo：<https://bjbjshao.github.io/RedmiK80Ultra-wallpaper-dock/>
 
 ## 参数说明
 
